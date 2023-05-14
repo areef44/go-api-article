@@ -1,7 +1,6 @@
 package categorycontroller
 
 import (
-	"encoding/json"
 	"errors"
 	"go-api-article/config"
 	"go-api-article/helper"
@@ -29,12 +28,23 @@ func Index(w http.ResponseWriter, r *http.Request) {
 func Create(w http.ResponseWriter, r *http.Request) {
 	var category models.Category
 
-	if err := json.NewDecoder(r.Body).Decode(&category); err != nil {
-		helper.Response(w, 500, err.Error(), nil)
+	//get form data
+	name := r.FormValue("name")
+	if name == "" {
+		helper.Response(w, 400, "Nama Kategori Tidak Boleh Kosong", nil)
+		return
+	}
+
+	description := r.FormValue("description")
+	if description == "" {
+		helper.Response(w, 400, "Deskripsi Tidak Boleh Kosong", nil)
 		return
 	}
 
 	defer r.Body.Close()
+
+	category.Name = name
+	category.Description = description
 
 	if err := config.DB.Create(&category).Error; err != nil {
 		helper.Response(w, 500, err.Error(), nil)
@@ -63,28 +73,41 @@ func Detail(w http.ResponseWriter, r *http.Request) {
 }
 
 func Update(w http.ResponseWriter, r *http.Request) {
-	idParams := mux.Vars(r)["id"]
-	id, _ := strconv.Atoi(idParams)
-
 	var category models.Category
 
-	if err := config.DB.First(&category, id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			helper.Response(w, 404, "Category Tidak Ditemukan", nil)
-			return
-		}
-		helper.Response(w, 500, err.Error(), nil)
+	idParams := mux.Vars(r)["id"]
+	id, err := strconv.Atoi(idParams)
+
+	if err != nil {
+		helper.Response(w, 400, "Invalid Article ID", nil)
 		return
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&category); err != nil {
-		helper.Response(w, 500, err.Error(), nil)
-		return
-	}
+	name := r.FormValue("name")
+	description := r.FormValue("description")
 
 	defer r.Body.Close()
 
-	if err := config.DB.Where("id = ?", id).Updates(&category).Error; err != nil {
+	if name == "" || description == "" {
+		helper.Response(w, 400, "Name dan Description harus diisi", nil)
+		return
+	}
+
+	//update category
+	if err := config.DB.First(&category, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			helper.Response(w, 404, "Kategori Tidak Ditemukan", nil)
+			return
+		}
+
+		helper.Response(w, 500, err.Error(), nil)
+		return
+	}
+
+	category.Name = name
+	category.Description = description
+
+	if err := config.DB.Save(&category).Error; err != nil {
 		helper.Response(w, 500, err.Error(), nil)
 		return
 	}

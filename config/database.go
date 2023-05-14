@@ -19,7 +19,7 @@ func ConnectDB() {
 		panic("Koneksi Ke Database Gagal")
 	}
 
-	db.AutoMigrate(&models.Category{})
+	db.AutoMigrate(&models.Category{}, &models.Article{})
 
 	DB = db
 	log.Println("Database Berhasil Dihubungkan")
